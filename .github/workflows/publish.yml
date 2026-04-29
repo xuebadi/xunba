@@ -7,37 +7,64 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     steps:
-      - name: Download AppImage artifact
+      - name: Download artifacts
         run: |
           curl -sL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "${{ github.api_url }}/repos/${{ github.repository }}/actions/artifacts/6708776174/zip" \
             -o xunba-appimage.zip
-
-      - name: Download deb artifact
-        run: |
           curl -sL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "${{ github.api_url }}/repos/${{ github.repository }}/actions/artifacts/6708807272/zip" \
             -o xunba-deb.zip
+          ls -lh *.zip
 
-      - name: Get release ID
-        id: release
+      - name: Upload to Release
         run: |
-          RELEASE=$(curl -sL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/releases/latest")
-          echo "id=$(echo $RELEASE | python3 -c 'import sys,json; print(json.load(sys.stdin)[\"id\"])')" >> $GITHUB_OUTPUT
+          python3 << 'SCRIPT'
+          import urllib.request, json, os
 
-      - name: Upload AppImage to Release
-        run: |
-          curl -sL -X POST \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/zip" \
-            --data-binary @xunba-appimage.zip \
-            "${{ github.api_url }}/repos/${{ github.repository }}/releases/${{ steps.release.outputs.id }}/assets?name=xunba-1.0.0.AppImage.zip"
+          token = os.environ["GITHUB_TOKEN"]
+          repo = "${{ github.repository }}"
+          api = "https://api.github.com"
 
-      - name: Upload deb to Release
-        run: |
-          curl -sL -X POST \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/zip" \
-            --data-binary @xunba-deb.zip \
-            "${{ github.api_url }}/repos/${{ github.repository }}/releases/${{ steps.release.outputs.id }}/assets?name=xunba-1.0.0.deb.zip"
+          # Get latest release ID
+          req = urllib.request.Request(
+              f"{api}/repos/{repo}/releases/latest",
+              headers={"Authorization": f"Bearer {token}"}
+          )
+          with urllib.request.urlopen(req) as r:
+              rel = json.loads(r.read())
+              rel_id = rel["id"]
+              print(f"Release ID: {rel_id}")
+
+          # Upload files
+          for fname in ["xunba-appimage.zip", "xunba-deb.zip"]:
+              if not os.path.exists(fname):
+                  print(f"SKIP: {fname} not found")
+                  continue
+              size = os.path.getsize(fname)
+              print(f"Uploading {fname} ({size//1024//1024}MB)...")
+
+              with open(fname, "rb") as f:
+                  data = f.read()
+
+              display_name = fname.replace(".zip", "")
+              url = f"{api}/repos/{repo}/releases/{rel_id}/assets?name={urllib.parse.quote(display_name)}"
+              req = urllib.request.Request(
+                  url,
+                  data=data,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Content-Type": "application/zip",
+                  },
+                  method="POST"
+              )
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      asset = json.loads(r.read())
+                      print(f"  ✅ {asset['name']} ({asset['size']//1024//1024}MB)")
+              except Exception as e:
+                  if hasattr(e, 'read'):
+                      print(f"  ❌ {e.read().decode()}")
+                  else:
+                      print(f"  ❌ {e}")
+          SCRIPT
