@@ -16,20 +16,20 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     steps:
-      - name: Download AppImage
+      - name: Download AppImage artifact
         run: |
-          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          curl -sL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "${{ github.api_url }}/repos/${{ github.repository }}/actions/artifacts/${{ inputs.appimage_artifact_id }}/zip" \
             -o xunba-appimage.zip
 
-      - name: Download deb
+      - name: Download deb artifact
         run: |
-          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          curl -sL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "${{ github.api_url }}/repos/${{ github.repository }}/actions/artifacts/${{ inputs.deb_artifact_id }}/zip" \
             -o xunba-deb.zip
 
       - name: List files
-        run: ls -lh
+        run: ls -lh *.zip
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
