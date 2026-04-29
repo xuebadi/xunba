@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""
+Linux OCR helper using Tesseract
+Requires: tesseract-ocr, tesseract-ocr-chi-sim, tesseract-ocr-chi-tra
+"""
+import sys
+import subprocess
+import os
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: ocr-helper-linux <image-path>")
+        sys.exit(1)
+    
+    image_path = sys.argv[1]
+    
+    if not os.path.exists(image_path):
+        print(f"[ERROR] File not found: {image_path}")
+        sys.exit(1)
+    
+    # Run tesseract with Chinese + English
+    try:
+        result = subprocess.run(
+            ['tesseract', image_path, 'stdout', '-l', 'chi_sim+chi_tra+eng', '--psm', '6'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode != 0:
+            if 'not found' in result.stderr or result.returncode == 127:
+                print("[ERROR] Tesseract not installed. Install with: sudo apt install tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-chi-tra")
+            else:
+                print(f"[ERROR] OCR failed: {result.stderr.strip()}")
+            sys.exit(1)
+        
+        text = result.stdout.strip()
+        if text:
+            print(text)
+        else:
+            print("[INFO] No text detected")
+            
+    except subprocess.TimeoutExpired:
+        print("[ERROR] OCR timeout")
+        sys.exit(1)
+    except FileNotFoundError:
+        print("[ERROR] Tesseract not installed. Install with: sudo apt install tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-chi-tra")
+        sys.exit(1)
+    except Exception as e:
+        print(f"[ERROR] OCR failed: {e}")
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()
