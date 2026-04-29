@@ -17,6 +17,7 @@
   "build": {
     "appId": "com.xuebadi.xunba",
     "productName": "学霸帝AI",
+    "publish": null,
     "directories": {
       "output": "dist"
     },
