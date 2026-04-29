@@ -3,6 +3,8 @@ name: Build Linux App
 on:
   push:
     branches: [main]
+  release:
+    types: [created]
 
 jobs:
   build:
@@ -65,3 +67,28 @@ jobs:
           name: xunba-deb
           path: dist/*.deb
           retention-days: 7
+
+  upload-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+      - name: Download AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: xunba-appimage
+
+      - name: Download deb
+        uses: actions/download-artifact@v4
+        with:
+          name: xunba-deb
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.AppImage
+            *.deb
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
