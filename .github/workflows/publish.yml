@@ -3,6 +3,9 @@ name: Upload to Release
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   upload:
     runs-on: ubuntu-latest
@@ -36,9 +39,12 @@ jobs:
           with urllib.request.urlopen(req) as r:
               rel = json.loads(r.read())
               rel_id = rel['id']
+              upload_url = rel['upload_url']
               print(f'Release ID: {rel_id}')
+              print(f'Upload URL template: {upload_url}')
 
-          # Upload files
+          # Upload files using uploads.github.com
+          base_url = upload_url.split('{')[0]
           for fname in ['xunba-appimage.zip', 'xunba-deb.zip']:
               if not os.path.exists(fname):
                   print(f'SKIP: {fname} not found')
@@ -49,8 +55,8 @@ jobs:
               with open(fname, 'rb') as f:
                   data = f.read()
 
-              display_name = fname.replace('.zip', '')
-              url = f'{api}/repos/{repo}/releases/{rel_id}/assets?name={urllib.parse.quote(display_name)}'
+              display_name = fname
+              url = f'{base_url}?name={urllib.parse.quote(display_name)}'
               req = urllib.request.Request(
                   url,
                   data=data,
@@ -65,8 +71,6 @@ jobs:
                       asset = json.loads(r.read())
                       print(f'  OK: {asset[\"name\"]} ({asset[\"size\"]//1024//1024}MB)')
               except Exception as e:
-                  if hasattr(e, 'read'):
-                      print(f'  ERROR: {e.read().decode()}')
-                  else:
-                      print(f'  ERROR: {e}')
+                  body = e.read() if hasattr(e, 'read') else str(e)
+                  print(f'  ERROR: {body}')
           "
