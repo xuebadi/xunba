@@ -1,0 +1,40 @@
+name: Upload to Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      appimage_artifact_id:
+        description: 'AppImage Artifact ID'
+        required: true
+        default: '6708776174'
+      deb_artifact_id:
+        description: 'deb Artifact ID'
+        required: true
+        default: '6708807272'
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download AppImage
+        run: |
+          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/actions/artifacts/${{ inputs.appimage_artifact_id }}/zip" \
+            -o xunba-appimage.zip
+
+      - name: Download deb
+        run: |
+          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/actions/artifacts/${{ inputs.deb_artifact_id }}/zip" \
+            -o xunba-deb.zip
+
+      - name: List files
+        run: ls -lh
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.zip
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
