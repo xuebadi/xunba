@@ -1,0 +1,71 @@
+{
+  "name": "xunba",
+  "version": "1.0.0",
+  "description": "学霸帝AI - Local Small Model AI Platform",
+  "main": "main.js",
+  "author": {
+    "name": "XuebaAI",
+    "email": "xuebadi@example.com"
+  },
+  "homepage": "https://github.com/xuebadi/xunba",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac dmg --x64",
+    "build:linux": "electron-builder --linux --x64",
+    "build:all": "electron-builder -mwl --x64"
+  },
+  "build": {
+    "appId": "com.xuebadi.xunba",
+    "productName": "学霸帝AI",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "src/**/*",
+      "ocr-helper/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "bin",
+        "to": "bin",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "lib",
+        "to": "lib",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.education"
+    },
+    "dmg": {
+      "title": "学霸帝AI 安装程序",
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "linux": {
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] },
+        { "target": "deb", "arch": ["x64"] }
+      ],
+      "category": "Education",
+      "maintainer": "xuebadi@example.com",
+      "desktop": {
+        "Name": "学霸帝AI",
+        "Comment": "Local Small Model AI Platform",
+        "Categories": "Education;Development;"
+      }
+    }
+  },
+  "dependencies": {
+    "electron": "^33.4.11"
+  },
+  "devDependencies": {
+    "electron-builder": "^25.1.8"
+  }
+}
