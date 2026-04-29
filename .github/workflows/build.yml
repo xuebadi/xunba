@@ -3,8 +3,6 @@ name: Build Linux App
 on:
   push:
     branches: [main]
-  release:
-    types: [created]
 
 jobs:
   build:
@@ -35,37 +33,35 @@ jobs:
           cmake --build build --config Release -j$(nproc)
           sudo cp build/bin/llama-server /usr/local/bin/
 
-      - name: Build Linux packages
-        env:
-          ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
+      - name: Prepare binaries
         run: |
           mkdir -p bin lib ocr-helper
           cp /usr/local/bin/llama-server bin/
           cp ocr-helper/ocr-helper-linux ocr-helper/ocr-helper
           chmod +x ocr-helper/ocr-helper
-          npm run build:linux
 
-      - name: Upload artifacts
+      - name: Build Linux AppImage
+        env:
+          ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
+        run: npx electron-builder --linux AppImage --x64 || true
+
+      - name: Upload AppImage
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: linux-builds-${{ github.run_id }}
-          path: |
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.zip
-          retention-days: 30
+          name: xunba-appimage
+          path: dist/*.AppImage
+          retention-days: 7
 
-      - name: Create Release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            dist/*.AppImage
-            dist/*.deb
+      - name: Build Linux deb
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
+        run: npx electron-builder --linux deb --x64 || true
 
-      - name: Upload to Release from artifact
-        if: github.event_name == 'release'
-        run: |
-          echo "Artifacts uploaded, please download from the release page"
+      - name: Upload deb
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xunba-deb
+          path: dist/*.deb
+          retention-days: 7
