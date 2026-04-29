@@ -6,6 +6,8 @@ on:
 jobs:
   upload:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Download artifacts
         run: |
@@ -19,52 +21,52 @@ jobs:
 
       - name: Upload to Release
         run: |
-          python3 << 'SCRIPT'
-          import urllib.request, json, os
+          python3 -c "
+          import urllib.request, urllib.parse, json, os
 
-          token = os.environ["GITHUB_TOKEN"]
-          repo = "${{ github.repository }}"
-          api = "https://api.github.com"
+          token = os.environ['GITHUB_TOKEN']
+          repo = '${{ github.repository }}'
+          api = 'https://api.github.com'
 
           # Get latest release ID
           req = urllib.request.Request(
-              f"{api}/repos/{repo}/releases/latest",
-              headers={"Authorization": f"Bearer {token}"}
+              f'{api}/repos/{repo}/releases/latest',
+              headers={'Authorization': f'Bearer {token}'}
           )
           with urllib.request.urlopen(req) as r:
               rel = json.loads(r.read())
-              rel_id = rel["id"]
-              print(f"Release ID: {rel_id}")
+              rel_id = rel['id']
+              print(f'Release ID: {rel_id}')
 
           # Upload files
-          for fname in ["xunba-appimage.zip", "xunba-deb.zip"]:
+          for fname in ['xunba-appimage.zip', 'xunba-deb.zip']:
               if not os.path.exists(fname):
-                  print(f"SKIP: {fname} not found")
+                  print(f'SKIP: {fname} not found')
                   continue
               size = os.path.getsize(fname)
-              print(f"Uploading {fname} ({size//1024//1024}MB)...")
+              print(f'Uploading {fname} ({size//1024//1024}MB)...')
 
-              with open(fname, "rb") as f:
+              with open(fname, 'rb') as f:
                   data = f.read()
 
-              display_name = fname.replace(".zip", "")
-              url = f"{api}/repos/{repo}/releases/{rel_id}/assets?name={urllib.parse.quote(display_name)}"
+              display_name = fname.replace('.zip', '')
+              url = f'{api}/repos/{repo}/releases/{rel_id}/assets?name={urllib.parse.quote(display_name)}'
               req = urllib.request.Request(
                   url,
                   data=data,
                   headers={
-                      "Authorization": f"Bearer {token}",
-                      "Content-Type": "application/zip",
+                      'Authorization': f'Bearer {token}',
+                      'Content-Type': 'application/zip',
                   },
-                  method="POST"
+                  method='POST'
               )
               try:
                   with urllib.request.urlopen(req) as r:
                       asset = json.loads(r.read())
-                      print(f"  ✅ {asset['name']} ({asset['size']//1024//1024}MB)")
+                      print(f'  OK: {asset[\"name\"]} ({asset[\"size\"]//1024//1024}MB)')
               except Exception as e:
                   if hasattr(e, 'read'):
-                      print(f"  ❌ {e.read().decode()}")
+                      print(f'  ERROR: {e.read().decode()}')
                   else:
-                      print(f"  ❌ {e}")
-          SCRIPT
+                      print(f'  ERROR: {e}')
+          "
