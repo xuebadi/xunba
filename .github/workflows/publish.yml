@@ -2,15 +2,6 @@ name: Upload to Release
 
 on:
   workflow_dispatch:
-    inputs:
-      appimage_artifact_id:
-        description: 'AppImage Artifact ID'
-        required: true
-        default: '6708776174'
-      deb_artifact_id:
-        description: 'deb Artifact ID'
-        required: true
-        default: '6708807272'
 
 jobs:
   upload:
@@ -19,22 +10,34 @@ jobs:
       - name: Download AppImage artifact
         run: |
           curl -sL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/actions/artifacts/${{ inputs.appimage_artifact_id }}/zip" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/actions/artifacts/6708776174/zip" \
             -o xunba-appimage.zip
 
       - name: Download deb artifact
         run: |
           curl -sL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/actions/artifacts/${{ inputs.deb_artifact_id }}/zip" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/actions/artifacts/6708807272/zip" \
             -o xunba-deb.zip
 
-      - name: List files
-        run: ls -lh *.zip
+      - name: Get release ID
+        id: release
+        run: |
+          RELEASE=$(curl -sL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/releases/latest")
+          echo "id=$(echo $RELEASE | python3 -c 'import sys,json; print(json.load(sys.stdin)[\"id\"])')" >> $GITHUB_OUTPUT
 
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            *.zip
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload AppImage to Release
+        run: |
+          curl -sL -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/zip" \
+            --data-binary @xunba-appimage.zip \
+            "${{ github.api_url }}/repos/${{ github.repository }}/releases/${{ steps.release.outputs.id }}/assets?name=xunba-1.0.0.AppImage.zip"
+
+      - name: Upload deb to Release
+        run: |
+          curl -sL -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/zip" \
+            --data-binary @xunba-deb.zip \
+            "${{ github.api_url }}/repos/${{ github.repository }}/releases/${{ steps.release.outputs.id }}/assets?name=xunba-1.0.0.deb.zip"
